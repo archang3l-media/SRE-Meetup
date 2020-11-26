@@ -1,0 +1,43 @@
+---
+- name: add docker repository (Centos/RHEL)
+  template:
+    src: docker-ce.repo.rhel
+    dest: /etc/yum.repos.d/docker-ce.repo
+  when: ansible_os_family == 'CentOS'
+
+- name: add docker repository key (Debian)
+  apt_key:
+    url: https://download.docker.com/linux/ubuntu/gpg
+  when: ansible_os_family == "Debian"
+
+- name: add docker repository (Debian)
+  template:
+    src: docker-ce.repo.deb
+    dest: /etc/apt/sources.list.d/docker.list
+  when: ansible_os_family == "Debian"
+
+- name: installing docker requirements
+  package:
+    name: "{{os_packages[ansible_os_family][item]}}"
+    state: present
+  with_items:
+    - python-setuptools
+    - lvm2
+    - docker-ce
+    - git
+    - python-pip
+    - docker-compose
+
+- name: Install Docker Python requirements
+  pip:
+    name: docker
+    state: present
+
+- name: enable service docker and ensure it is not masked
+  systemd:
+    name: docker
+    enabled: yes
+    masked: no
+
+- name: Make sure docker is running
+  systemd: state=started name=docker

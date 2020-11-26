@@ -1,0 +1,31 @@
+- hosts: new_server
+  gather_facts: True
+  remote_user: root
+  become: true
+  vars_files:
+    - "roles/user/vars/all_users.yml"
+  vars:
+    users:
+     - "{{all_users.rborchers}}"
+    demo: true
+  roles:
+    - role: basesystem
+    - role: user
+    - role: date_time
+      ntp_enabled: true
+    - role: fail2ban
+    - role: docker
+    - role: wekan
+      service_port: 3001
+    - role: codimd
+      service_port: 3000
+    - role: nginx-proxy
+      service: wekan
+      service_port: 3001
+    - role: nginx-proxy
+      service: codimd
+      service_port: 3000
+    - role: lets-encrypt
+      domains:
+        - wekan.{{ansible_host}}
+        - codimd.{{ansible_host}}

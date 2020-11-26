@@ -1,0 +1,17 @@
+---
+- name: Create the wekan directory
+  file:
+    path: /wekan/
+    state: directory
+    mode: '0755'
+
+- name: Copy the Docker-Compose Template
+  template:
+    src: docker-compose.yaml.j2
+    dest: /wekan/docker-compose.yaml
+
+- name: start the wekan container
+  docker_compose:
+    project_src: /wekan/
+    build: yes
+    state: present

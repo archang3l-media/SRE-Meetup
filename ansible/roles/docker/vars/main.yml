@@ -1,0 +1,21 @@
+os_packages:
+  Debian:
+    docker-engine-selinux: ''
+    python-setuptools: python-setuptools
+    yum-utils: ''
+    device-mapper-persistent-data: ''
+    lvm2: lvm2
+    docker-ce: docker.io
+    git: git
+    python-pip: python3-pip
+    docker-compose: docker-compose
+  RedHat:
+    docker-engine-selinux: docker-engine-selinux
+    python-setuptools: python-setuptools
+    yum-utils: yum-utils
+    device-mapper-persistent-data: device-mapper-persistent-data
+    lvm2: lvm2
+    docker-ce: docker-ce
+    git: git
+    python-pip: python-pip
+    docker-compose: docker-compose

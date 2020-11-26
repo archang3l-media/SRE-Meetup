@@ -1,0 +1,27 @@
+version: '3'
+services:
+  database:
+    image: postgres:11.6-alpine
+    environment:
+      - POSTGRES_USER={{  db_user  }}
+      - POSTGRES_PASSWORD={{  db_pass  }}
+      - POSTGRES_DB=codimd
+    volumes:
+      - database:/codi/db
+    restart: always
+  app:
+    image: nabo.codimd.dev/hackmdio/hackmd:2.2.0
+    environment:
+      - CMD_DB_URL=postgres://{{  db_user  }}:{{  db_pass  }}@database/codimd
+      - CMD_USECDN=false
+    ports:
+      - "{{  service_port  }}:{{  service_port  }}"
+    restart: always
+    depends_on:
+      - database
+    volumes:
+      - upload-data:/home/hackmd/app/public/uploads
+    restart: always
+volumes:
+  database: {}
+  upload-data: {}

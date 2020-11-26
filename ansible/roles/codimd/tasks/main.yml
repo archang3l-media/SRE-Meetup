@@ -1,0 +1,21 @@
+---
+- name: Make sure docker is running
+  systemd: state=started name=docker
+
+- name: create folders
+  file:
+    path: /codi/
+    owner: root
+    group: root
+    state: directory
+
+- name: Deploy codi-md config
+  template:
+    src: docker-compose.yml.j2
+    dest: /codi/docker-compose.yml
+
+- name: start the hackmd container
+  docker_compose:
+    project_src: /codi/
+    build: yes
+    state: present

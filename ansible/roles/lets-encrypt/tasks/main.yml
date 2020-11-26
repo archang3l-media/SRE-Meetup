@@ -1,0 +1,48 @@
+---
+- name: create 4096 bit DHparam if they don't exist yet
+  openssl_dhparam:
+    path: /etc/ssl/dhparam.pem
+    size: 4096
+  when: demo !=false
+
+- name: Copy 4096 bit DHParam since we got no time
+  template:
+    src: dhparam.pem
+    dest: /etc/ssl/dhparam.pem
+  when: demo == true
+
+- name: Make Sure nginx and certbot are installed
+  package:
+    name: "{{item}}"
+    state: present
+  with_items:
+    - nginx
+    - certbot
+    - python3-certbot-nginx
+
+- name: Create Folders for our temporary certificates
+  file:
+    path: "/etc/letsencrypt/live/{{ansible_host}}/"
+    state: directory
+    recurse: yes
+
+- name: Copy our Self Signed Certificate and private key
+  template:
+    src: "{{  item.src  }}"
+    dest: "{{  item.dest  }}"
+  with_items:
+    - { src: 'fullchain.pem', dest: '/etc/letsencrypt/live/{{ansible_host}}/fullchain.pem'}
+    - { src: 'privkey.pem', dest: '/etc/letsencrypt/live/{{ansible_host}}/privkey.pem'}
+
+- name: restart nginx to ensure everything working so far
+  service:
+    name: nginx
+    state: restarted
+
+- name: Run Certbot Auto #this is a dirty hack but works
+  command: certbot --non-interactive --agree-tos -m "{{lets_encrypt_mail_adress}}" --nginx -d {{ domains | join(',') }} --expand
+  when: demo == false
+
+- name: Run Certbot Auto #this is a dirty hack but works
+  command: certbot --non-interactive --agree-tos -m "{{lets_encrypt_mail_adress}}" --nginx -d {{ domains | join(',') }} --expand --staging
+  when: demo == true

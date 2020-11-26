@@ -1,0 +1,288 @@
+<!doctype html>
+<html lang="de">
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+		<title>reveal.js</title>
+
+		<link rel="stylesheet" href="/dist/reset.css">
+		<link rel="stylesheet" href="/dist/reveal.css">
+		<link rel="stylesheet" href="/dist/theme/blood.css" id="theme">
+
+		<!-- Theme used for syntax highlighted code -->
+		<link rel="stylesheet" href="plugin/highlight/monokai.css" id="highlight-theme">
+	</head>
+	<body>
+		<div class="reveal">
+			<div class="slides">
+				<section>
+					<h1>Ansible all the Things</h1>
+					<h3>A walkthrough about ansible</h3>
+					<p>
+						<small>Created by <a href="https://github.com/archang3l-media">Heiko Borchers</a> with <a href="https://github.com/hakimel/reveal.js/">reveal.js</a></small>
+					</p>
+				</section>
+
+				<!-- Example of nested vertical slides -->
+				<section>
+					<section>
+						<h2>About Me</h2>
+						<ul>
+							<li>DevOps</li>
+							<li>Cloud Infrastructure</li>
+							<li>Automation everywhere</li>
+							<li>Using Terraform and Ansible on a daily basis</li>
+						</ul>
+					</section>
+
+					<section>
+						<h2>Motivation</h2>
+						<p>
+							Ansible is my tool of choice when it comes to infrastructure automation and it's getting more and more attention
+						</p>
+					</section>
+					<section>
+						<h3>Why Ansible?</h3>
+						<ul>
+							<li>Agentless</li>
+							<li>No need for centralized infrastructure</li>
+							<li>Easy to learn and to read</li>
+							<li>Open Source (GPL-3.0)</li>
+							<li>Idempotency</li>
+						</ul>
+						<aside class="notes">
+							<ul>
+								<li>Vorteile von "Agentless"</li>
+								<li>Bei der zentralen Infrastruktur auf AWX/Tower Hinweisen</li>
+								<li>Idempotenz erklären</li>
+							</ul>
+						</aside>
+					</section>
+					<section>
+						<h3>Why not?</h3>
+						<ul>
+							<li>Performance</li>
+							<li>YAML</li>
+						</ul>
+					</section>
+				</section>
+
+				<section>
+					<section>
+						<h1>Basics</h1>
+					</section>
+					<section>
+						<h2>Folder Structure</h2>
+						<pre><code data-trim data-noescape>.
+├── ansible.cfg
+├── credentials
+│   └── Server1.sha512
+├── group_vars
+│   └── Server1.yml
+├── hosts.yml
+├── playbook.yml
+├── roles
+│   ├── awx_requirements
+│   │   ├── handlers
+│   │   │   └── main.yml
+│   │   ├── tasks
+│   │   │   └── main.yml
+│   │   ├── templates
+│   │   │   ├── docker-ce.repo
+│   │   │   └── docker-compose.yml.j2
+│   │   └── vars
+│   │       └── main.yml</code></pre>
+					</section>
+					<section>
+						<h2>The Ansible.cfg</h2>
+						<pre><code data-trim data-noescape>[defaults]
+inventory=./hosts.yml
+remote_user=root
+log_path=ansible.log
+gathering = smart
+fact_caching = jsonfile
+fact_caching_connection = .fact_cache/
+fact_caching_timeout = 86400
+vault_password_file=~/.pw/ansiblevault
+remote_tmp     = .ansible/tmp
+local_tmp      = .ansible/tmp
+                                                </code></pre>
+					</section>
+					<section>
+						<h2>The Inventory</h2>
+						<pre><code data-trim data-noescape>---
+MyServers:
+  hosts:
+    rootserver:
+      ansible_host: example.host
+      ansible_user: example_user
+      vars:
+        snmp_location: "Big Data Center"
+    raspi:
+      ansible_host: 192.168.1.1
+      ansible_user: root
+      vars:
+        snmp_location: "Somewhere in the House"
+WorkServers:
+[..]</code></pre>
+					</section>
+					<section>
+						<h2>A simple Playbook</h2>
+						<pre><code data-trim data-noescape>
+- hosts: all
+  gather_facts: True
+  remote_user: root
+  become: yes
+  vars:
+    users:
+     - "{{all_users.my_username}}"
+  roles:
+    - role: packages
+    - role: date_time
+    - role: hosts
+    - role: user
+                                                </code> </pre>
+					</section>
+				</section>
+
+				<section>
+					<section>
+						<h1>Roles</h1>
+						<pre><code data-trim data-noescape>└── user
+    ├── README.md
+    ├── defaults
+    │   └── main.yml
+    ├── files
+    │   ├── my_username
+    │   ├── password_gen.py
+    │   └── sudoers.j2
+    ├── handlers
+    │   └── main.yml
+    ├── tasks
+    │   └── main.yml
+    └── vars
+        └── all_users.yml
+</code></pre>
+					</section>
+					<section>
+						<h2>defaults</h2>
+						<pre><code data-trim data-noescape>
+---
+   non_unique: no
+   sudoers: False
+   user_update_password: no
+</code></pre>
+					</section>
+					<section>
+						<h2>files</h2>
+						<p>
+							Dateien, die ihr nicht als Templates habt, sondern so wie sie sind, auf dem Zielcomputer haben wollt</p>
+					</section>
+					<section><pre><code data-trim data-noescape>---
+ - name: Copy sudoers file for safety
+   command: cp -f /etc/sudoers /etc/sudoers.tmp
+
+ - name: Create sudoers file backup
+   command: cp -f /etc/sudoers /etc/sudoers.bak
+
+ - name: make sure we can sudo as admin group
+   lineinfile: dest=/etc/sudoers.tmp state=present regexp='^%admin' line='%admin ALL=(ALL) ALL'
+
+ - name: also make sure ssh-agent works via sudo
+   lineinfile: dest=/etc/sudoers.tmp state=present regexp='^Defaults env_keep\+\=SSH_AUTH_SOCK' line='Defaults env_keep+=SSH_AUTH_SOCK'
+
+ - name: Final sudoers file check
+   shell: visudo -q -c -f /etc/sudoers.tmp && cp -f /etc/sudoers.tmp /etc/sudoers
+
+ - name: restart ssh daemon
+   service: name=sshd state=restarted</code></pre></section>
+					<section>
+						<h2>handlers</h2>
+						<pre><code data-trim data-noescape>---
+  - name: restart ssh daemon
+    service: name=sshd state=restarted
+                                                </code></pre>
+					</section>
+					<section>
+						<h2>Tasks (1/2)</h2>
+						<pre><code data-trim data-noescape>---
+- name: installing base software
+  package:
+    name: "{{os_packages[ansible_os_family][item]}}"
+    state: present
+  with_items:
+    - vim
+    - nginx
+    - ansible</code></pre>
+					</section>
+					<section>
+						<h2>Tasks (2/2)</h2>
+						<pre><code data-trim data-noescape>---
+- name: secure ssh daemon
+  lineinfile: dest=/etc/ssh/sshd_config regexp=^PermitRootLogin line="PermitRootLogin without-password"
+  when: permitrootlogin is not defined
+  notify: restart ssh daemon
+  tags:
+    - new_system</code></pre>
+					</section>
+					<section>
+						<h2>vars (1/2)</h2>
+						<pre><code data-trim data-noescape>
+---
+os_packages:
+    Debian:
+        monitoring-plugins: monitoring-plugins-basic
+    RedHat:
+        monitoring-plugins: nagios-plugins
+    ArchLinux:
+        monitoring-plugins: monitoring-plugins
+                                                </code></pre>
+					</section>
+					<section>
+						<h2>Vars (2/2)</h2>
+						<pre><code data-trim data-noescape>
+vault_masterpassword: !vault |
+          $ANSIBLE_VAULT;1.1;AES256
+          13372342133723421337234213372342133723421337234213372342133723421337234213372342
+          13372342133723421337234213372342133723421337234213372342133723421337234213372342
+          13372342133723421337234213372342133723421337234213372342133723421337234213372342
+          13372342133723421337234213372342133723421337234213372342133723421337234213372342
+          13372342</code></pre>
+					</section>
+				</section>
+				<section>
+					<section>
+						<h1>How can Ansible help at your workplace?</h1>
+					</section>
+					<section>
+						<h2>Demo Time</h2>
+					</section>
+				</section>
+				<section>
+					<h2>Danke für eure Aufmerksamkeit</h2>
+					<p>Den Code für die Slides findet ihr auf <a href="https://github.com/archang3l-media/sre_meetup">Github</a><br> und auf
+						<a href="https://sre-meetup.borchers.ninja/">Meinem Server</a></p>
+				</section>
+			</div>
+			<footer>26.11.2020 © Copyright Dr. Glinz COVIS GmbH, Heerdter Sandberg 30–32, 40549 Düsseldorf, Einstufung: <span style="color:black"> offen</span> | nur für den internen Gebrauch | vertraulich | streng vertraulich</footer>
+		</div>
+
+		<script src="dist/reveal.js"></script>
+		<script src="plugin/notes/notes.js"></script>
+		<script src="plugin/markdown/markdown.js"></script>
+		<script src="plugin/highlight/highlight.js"></script>
+		<script>
+			// More info about initialization & config:
+			// - https://revealjs.com/initialization/
+			// - https://revealjs.com/config/
+			Reveal.initialize({
+				hash: true,
+				pdfSeparateFragments: false,
+				// Learn about plugins: https://revealjs.com/plugins/
+				plugins: [ RevealMarkdown, RevealHighlight, RevealNotes  ],
+			});
+		</script>
+	</body>
+	<!-- Any section element inside of this container is displayed as a slide -->
+</html>

@@ -1,0 +1,12 @@
+---
+- name: Make Sure nginx and certbot are installed
+  package:
+    name: "{{item}}"
+    state: present
+  with_items:
+    - nginx
+
+- name: Deploy Nginx configuration
+  template:
+    src: proxy.conf.j2
+    dest: /etc/nginx/conf.d/{{service}}.conf

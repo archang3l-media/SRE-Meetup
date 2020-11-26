@@ -1,0 +1,56 @@
+upstream {{  service  }} {
+    server 127.0.0.1:{{ wekan_port }};
+}
+# HTTP Server
+server {
+	listen 80;
+	listen [::]:80;
+	server_name {{  service  }}.{{ ansible_fqdn }};
+	return 301 https://$host$request_uri;
+}
+
+# HTTPS Server
+server {
+    listen 443 ssl http2;
+    server_name {{service}}.{{ ansible_fqdn }};
+    error_log /var/log/nginx/{{service}}.{{ ansible_hostname }}.log;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_dhparam /etc/ssl/dhparam.pem;
+    ssl_certificate /etc/letsencrypt/live/archangel-media.dev-0001/fullchain.pem; # managed by Certbot
+    ssl_certificate_key /etc/letsencrypt/live/archangel-media.dev-0001/privkey.pem; # managed by Certbot
+    ssl_session_cache shared:SSL:10m;
+    ssl_session_timeout 10m;
+    ssl_prefer_server_ciphers on;
+    ssl_ciphers TLS13-AES-256-GCM-SHA384:TLS13-CHACHA20-POLY1305-SHA256:TLS_AES_256_GCM_SHA384:TLS-AES-256-GCM-SHA384:TLS_CHACHA20_POLY1305_SHA256:TLS-CHACHA20-POLY1305-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-ECDSA-AES256-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-RSA-CHACHA20-POLY1305:ECDHE-RSA-AES256-SHA384:ECDHE-ECDSA-AES256-SHA:ECDHE-RSA-AES256-SHA;
+     ssl_stapling on;
+    add_header X-Frame-Options "ALLOW FROM *.archangel-media.dev";
+#    add_header 'X-Content-Type-Options' 'nosniff';
+    add_header 'X-XSS-Protection' '1; mode=block';
+    add_header 'X-Robots-Tag' 'none';
+    add_header 'X-Download-Options' 'noopen';
+    add_header 'X-Permitted-Cross-Domain-Policies' 'none';
+    add_header 'Referrer-Policy' 'no-referrer-when-downgrade';
+
+    location / {
+        include    mime.types;
+        proxy_pass http://{{  service  }}/;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $http_host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forward-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forward-Proto http;
+        proxy_set_header X-Nginx-Proxy true;
+        proxy_redirect off;
+        add_header 'Cache-Control' 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0';
+        expires off;
+        add_header Strict-Transport-Security "max-age=31536000; includeSubdomains;";
+        add_header X-Frame-Options "ALLOW FROM *.archangel-media.dev";
+        add_header 'X-XSS-Protection' '1; mode=block';
+        add_header 'X-Robots-Tag' 'none'; 
+        add_header 'X-Download-Options' 'noopen';
+        add_header 'X-Permitted-Cross-Domain-Policies' 'none'; 
+        add_header 'Referrer-Policy' 'no-referrer-when-downgrade';
+    }
+}

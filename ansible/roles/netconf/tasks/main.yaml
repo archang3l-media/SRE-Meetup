@@ -1,0 +1,29 @@
+---
+- name: Install Netplan
+  package:
+    name: netplan.io
+    state: present
+
+- name: Copy the Network Template
+  template:
+    src: ethernet.yaml.j2
+    dest: /etc/netplan/ethernet.yaml
+
+- name: Delete broken config (something with raspian and netplan)
+  file:
+    path: /etc/systemd/network/99-default.link
+    state: absent
+
+- name: Blacklist WiFi and Bluetooth drivers
+  copy:
+    src: files/raspi-blacklist.conf
+    dest: /etc/modprobe.d/raspi-blacklist.conf
+    mode: "600"
+
+- name: Restart Network Service
+  systemd:
+    name: networking
+    state: restarted
+
+- name: Apply Netplan Template
+  shell: netplan apply

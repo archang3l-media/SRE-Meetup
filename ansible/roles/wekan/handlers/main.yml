@@ -1,0 +1,5 @@
+# handlers/main.yml: Handlers for hackmd.Ansible
+  - name: Reload the Nginx service
+    service:
+      name: nginx
+      state: reloaded
